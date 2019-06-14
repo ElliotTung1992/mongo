@@ -1,6 +1,7 @@
 package com.github.dge1992.mongo.doamin;
 
 import lombok.Data;
+import org.springframework.data.annotation.Id;
 
 /**
  * @Author dongganene
@@ -9,6 +10,7 @@ import lombok.Data;
  **/
 @Data
 public class Dog {
+    @Id
     private Integer id;
     private String varieties;
 }

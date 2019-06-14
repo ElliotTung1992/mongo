@@ -2,6 +2,8 @@ package com.github.dge1992.mongo.doamin;
 
 import lombok.Data;
 
+import java.util.List;
+
 /**
  * @Author dongganene
  * @Description
@@ -11,4 +13,5 @@ import lombok.Data;
 public class UserParam extends User{
     private Integer startAge;
     private Integer endAge;
+    private List<User> users;
 }
