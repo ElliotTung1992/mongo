@@ -66,8 +66,8 @@ public class MongoTemplateController {
     @RequestMapping("/findByNameAndAge2")
     public Object findByNameAndAge2(){
         Criteria criteria = new Criteria();
-        criteria.and("name").is("ljj");
-        criteria.and("age").is(20);
+        criteria.and("name").is("ldh");
+        criteria.and("age").is(15);
         Query query = new Query(criteria);
         List<User> users = mongoTemplate.find(query, User.class,"user");
         return users;
@@ -98,7 +98,7 @@ public class MongoTemplateController {
 
     @RequestMapping("/deleteDogs")
     public Object deleteDogs(){
-        Query query = Query.query(Criteria.where("_id").is("4").and("dogs._id").is(1));
+        Query query = Query.query(Criteria.where("_id").is("6").and("dogs._id").is(1));
         Update update = new Update();
         update.unset("dogs.$");
         UpdateResult result = mongoTemplate.updateFirst(query, update, "user");
