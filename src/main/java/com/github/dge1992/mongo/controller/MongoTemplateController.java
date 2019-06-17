@@ -2,7 +2,6 @@ package com.github.dge1992.mongo.controller;
 
 import com.github.dge1992.mongo.doamin.User;
 import com.github.dge1992.mongo.doamin.UserParam;
-import com.mongodb.WriteResult;
 import com.mongodb.client.result.UpdateResult;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.mongodb.core.MongoTemplate;
@@ -91,10 +90,18 @@ public class MongoTemplateController {
     @RequestMapping("/updateDogsById")
     public Object updateDogsById(){
         Query query = Query.query(Criteria.where("_id").is("4").and("dogs._id").is(1));
-        Update update1 = new Update();
         Update update = Update.update("dogs.1.varieties", "比特111");
         UpdateResult userList = mongoTemplate.upsert(query, update, "user");
         return userList.getMatchedCount();
 //        return mongoTemplate.find(query, User.class, "user");
+    }
+
+    @RequestMapping("/deleteDogs")
+    public Object deleteDogs(){
+        Query query = Query.query(Criteria.where("_id").is("4").and("dogs._id").is(1));
+        Update update = new Update();
+        update.unset("dogs.$");
+        UpdateResult result = mongoTemplate.updateFirst(query, update, "user");
+        return result.getMatchedCount();
     }
 }
