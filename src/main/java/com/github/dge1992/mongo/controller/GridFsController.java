@@ -5,15 +5,15 @@ import com.mongodb.client.gridfs.GridFSBucket;
 import com.mongodb.client.gridfs.GridFSDownloadStream;
 import com.mongodb.client.gridfs.GridFSFindIterable;
 import com.mongodb.client.gridfs.model.GridFSFile;
+import io.swagger.annotations.Api;
+import io.swagger.annotations.ApiOperation;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.core.io.FileSystemResource;
-import org.springframework.core.io.Resource;
 import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.data.mongodb.gridfs.GridFsCriteria;
 import org.springframework.data.mongodb.gridfs.GridFsResource;
 import org.springframework.data.mongodb.gridfs.GridFsTemplate;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
@@ -31,6 +31,7 @@ import java.util.List;
  **/
 @RequestMapping("/gridFs")
 @RestController
+@Api(description = "Mongo文件系统Api测试")
 public class GridFsController {
 
     @Autowired
@@ -41,18 +42,14 @@ public class GridFsController {
 
     static final Integer STEAM_BYTE_LENGTH = 1024;
 
-    /**
-     * @author dongganen
-     * @date 2019/6/20
-     * @desc: 上传文件
-     */
-    @RequestMapping("/uploadFile")
-    public Object uploadFile() {
-        Resource file = new FileSystemResource("E:\\pdf\\机构改革后的单位简称和序列.pdf");
+    @ApiOperation(value = "上传文件")
+    @PostMapping("/uploadFile")
+    public Object uploadFile(MultipartFile file) {
         try {
+            String filename = file.getOriginalFilename();
             gridFsTemplate.store(file.getInputStream(),
-                    file.getFilename().substring(0, file.getFilename().lastIndexOf(".")),
-                    file.getFilename().substring(file.getFilename().lastIndexOf(".")));
+                    filename.substring(0, filename.lastIndexOf(".")),
+                    filename.substring(filename.lastIndexOf(".")));
         } catch (Exception e) {
             e.printStackTrace();
             return "上传失败";
@@ -60,15 +57,10 @@ public class GridFsController {
         return "上传成功";
     }
 
-    /**
-     * @author dongganen
-     * @date 2019/6/20
-     * @desc: 下载文件
-     */
-    @RequestMapping("/downloadFile")
-    public void downloadFile(HttpServletResponse response) throws IOException {
-        long start = System.currentTimeMillis();
-        GridFSFile gridFSFile = gridFsTemplate.findOne(new Query(new GridFsCriteria("_id").is("5d0b2feb823f95323c2df53d")));
+    @ApiOperation(value = "下载文件")
+    @GetMapping("/downloadFile/{fileId}")
+    public void downloadFile(@PathVariable("fileId") String fileId, HttpServletResponse response) throws IOException {
+        GridFSFile gridFSFile = gridFsTemplate.findOne(new Query(new GridFsCriteria("_id").is(fileId)));
         //打开下载流
         GridFSDownloadStream gridFSDownloadStream = gridFSBucket.openDownloadStream(gridFSFile.getObjectId());
         //转换成资源
@@ -86,46 +78,44 @@ public class GridFsController {
 //            outputStream.close();
 //        }
         responseBody(gridFsResource, response);
-        long end = System.currentTimeMillis();
-        System.out.println(end - start);
     }
 
-    /**
-     * @author dongganen
-     * @date 2019/6/20
-     * @desc: 删除文件
-     */
-    @RequestMapping("/deleteFile")
-    public Object deleteFile(){
-        gridFsTemplate.delete(new Query(new GridFsCriteria("_id").is("5d0b2fb4823f9503c42f1042")));
+    @ApiOperation(value = "删除文件")
+    @DeleteMapping("/deleteFile/{fileId}")
+    public Object deleteFile(@PathVariable("fileId")String fileId){
+        gridFsTemplate.delete(new Query(new GridFsCriteria("_id").is(fileId)));
         return "删除成功";
     }
 
-    /**
-     * @author dongganen
-     * @date 2019/6/20
-     * @desc: 获取文件列表
-     */
-    @RequestMapping("/selectFileList")
+    @ApiOperation(value = "获取文件详情")
+    @GetMapping("/getFile/{fileId}")
+    public Object getFile(@PathVariable("fileId")String fileId){
+        GridFSFile gridFSFile = gridFsTemplate.findOne(new Query(new GridFsCriteria("_id").is(fileId)));
+        return gridFSFile.toString();
+    }
+
+    @ApiOperation(value = "获取文件列表")
+    @GetMapping("/selectFileList")
     public Object selectFileList(){
         GridFSFindIterable gridFSFiles = gridFsTemplate.find(new Query());
-        List<GridFSFile> list = new ArrayList<>();
+        List<String> list = new ArrayList<>();
         MongoCursor<GridFSFile> iterator = gridFSFiles.iterator();
         while (iterator.hasNext()){
-            list.add(iterator.next());
+            list.add(iterator.next().toString());
         }
         return list;
     }
 
     /**
-     * 处理文件下载response
+     * 设置文件下载response头信息
      *
      * @param gridFsResource
      * @param response
      * @throws UnsupportedEncodingException
      */
-    public static void responseBody(GridFsResource gridFsResource, HttpServletResponse response) throws IOException {
+    public void responseBody(GridFsResource gridFsResource, HttpServletResponse response) throws IOException {
         if (gridFsResource != null) {
+            //Content-Disposition:激活文件下载对话框 attachment:提示保存还是打开 filename:文件名
             response.setHeader("Content-Disposition", "attachment; filename=" + URLEncoder.encode(gridFsResource.getFilename() + gridFsResource.getContentType(), "UTF-8"));
             responseFile(response, gridFsResource.getInputStream());
         }
@@ -137,7 +127,7 @@ public class GridFsController {
      * @param response
      * @param is
      */
-    public static void responseFile(HttpServletResponse response, InputStream is) {
+    public void responseFile(HttpServletResponse response, InputStream is) {
         try (OutputStream os = response.getOutputStream()) {
             byte[] buffer = new byte[STEAM_BYTE_LENGTH];
             while (is.read(buffer) != -1) {
